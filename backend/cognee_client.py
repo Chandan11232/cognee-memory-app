@@ -54,18 +54,24 @@ class CogneeClient:
         top_k: int = 5,
     ) -> dict:
         try:
-            results = await cognee.recall(
-                query_text=query,
-                top_k=top_k,
-                datasets=[dataset_name],
-            )
+            results = None
 
-            if not results and session_id:
-                results = await cognee.recall(
-                    query_text=query,
-                    top_k=top_k,
-                    session_id=session_id,
-                )
+            if session_id:
+                try:
+                    results = await cognee.recall(
+                        query_text=query,
+                        top_k=top_k,
+                        datasets=[dataset_name],
+                    )
+                except Exception:
+                    results = None
+
+            if not results:
+                session_kwargs = {"query_text": query, "top_k": top_k}
+                if session_id:
+                    session_kwargs["session_id"] = session_id
+
+                results = await cognee.recall(**session_kwargs)
 
             extracted = []
             for r in (results or []):

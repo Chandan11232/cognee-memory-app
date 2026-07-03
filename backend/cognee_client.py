@@ -7,18 +7,34 @@ import cognee
 from cognee.api.v1.recall.recall import SearchType
 from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
-import google.generativeai as genai
-
-genai.configure(api_key=os.getenv("LLM_API_KEY"))
-llm = genai.GenerativeModel("gemini-2.0-flash")
 
 load_dotenv()
+
+llm_api_key = os.getenv("LLM_API_KEY", "")
+llm_provider = os.getenv("LLM_PROVIDER", "gemini")
+llm_model = os.getenv("LLM_MODEL", "gemini/gemini-2.0-flash")
+embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
+embedding_provider = os.getenv("EMBEDDING_PROVIDER", "gemini")
+embedding_model = os.getenv("EMBEDDING_MODEL", "gemini/gemini-embedding-001")
+
+import google.generativeai as genai
+genai.configure(api_key=llm_api_key)
+llm = genai.GenerativeModel("gemini-2.0-flash")
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
 logger = logging.getLogger(__name__)
 
 
 class CogneeClient:
+    def __init__(self):
+        os.environ["LLM_PROVIDER"] = llm_provider
+        os.environ["LLM_MODEL"] = llm_model
+        os.environ["LLM_API_KEY"] = llm_api_key
+        os.environ["EMBEDDING_PROVIDER"] = embedding_provider
+        os.environ["EMBEDDING_MODEL"] = embedding_model
+        os.environ["EMBEDDING_API_KEY"] = embedding_api_key
+        os.environ["LLM_ENDPOINT"] = "https://generativelanguage.googleapis.com/"
+        os.environ["EMBEDDING_ENDPOINT"] = "https://generativelanguage.googleapis.com/"
     async def list_datasets(self) -> dict:
         try:
             datasets = await cognee.datasets.list_datasets()

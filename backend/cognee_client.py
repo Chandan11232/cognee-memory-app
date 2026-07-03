@@ -1,7 +1,10 @@
 import os
+import asyncio
 import uuid
+import json
 import logging
 from typing import Optional
+from urllib.request import Request, urlopen
 
 import cognee
 from cognee.api.v1.recall.recall import SearchType
@@ -11,30 +14,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
-llm_provider = os.getenv("LLM_PROVIDER", "gemini")
-llm_model = os.getenv("LLM_MODEL", "gemini/gemini-2.0-flash")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
-embedding_provider = os.getenv("EMBEDDING_PROVIDER", "gemini")
-embedding_model = os.getenv("EMBEDDING_MODEL", "gemini/gemini-embedding-001")
 
-import google.generativeai as genai
-genai.configure(api_key=llm_api_key)
-llm = genai.GenerativeModel("gemini-2.0-flash")
+gemini_base = "https://generativelanguage.googleapis.com/v1beta/openai"
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
 logger = logging.getLogger(__name__)
 
 
+gemini_base = "https://generativelanguage.googleapis.com/v1beta/openai"
+
 class CogneeClient:
     def __init__(self):
-        os.environ["LLM_PROVIDER"] = llm_provider
-        os.environ["LLM_MODEL"] = llm_model
+        os.environ["LLM_PROVIDER"] = "openai"
+        os.environ["LLM_MODEL"] = "models/gemini-2.0-flash"
         os.environ["LLM_API_KEY"] = llm_api_key
-        os.environ["EMBEDDING_PROVIDER"] = embedding_provider
-        os.environ["EMBEDDING_MODEL"] = embedding_model
+        os.environ["LLM_ENDPOINT"] = gemini_base
+        os.environ["EMBEDDING_PROVIDER"] = "openai"
+        os.environ["EMBEDDING_MODEL"] = "models/gemini-embedding-001"
         os.environ["EMBEDDING_API_KEY"] = embedding_api_key
-        os.environ["LLM_ENDPOINT"] = "https://generativelanguage.googleapis.com/"
-        os.environ["EMBEDDING_ENDPOINT"] = "https://generativelanguage.googleapis.com/"
+        os.environ["EMBEDDING_ENDPOINT"] = gemini_base
     async def list_datasets(self) -> dict:
         try:
             datasets = await cognee.datasets.list_datasets()
@@ -144,17 +143,23 @@ class CogneeClient:
                     "source": None,
                 }
 
-            prompt = f"""Based on the following context, answer the user's question concisely.
-
-Context:
-{context}
-
-Question: {query}
-
-Answer:"""
+            prompt = f"Based on the following context, answer the user's question concisely.\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
             try:
-                response = await llm.generate_content_async(prompt)
-                answer = response.text.strip()
+                body = json.dumps({
+                    "model": "models/gemini-2.0-flash",
+                    "messages": [{"role": "user", "content": prompt}],
+                }).encode()
+                req = Request(
+                    f"{gemini_base}/chat/completions",
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {llm_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))
+                data = json.loads(resp.read())
+                answer = data["choices"][0]["message"]["content"].strip()
             except Exception:
                 answer = None
 

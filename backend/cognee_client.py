@@ -54,25 +54,44 @@ class CogneeClient:
         top_k: int = 5,
     ) -> dict:
         try:
-            kwargs = {
-                "query_text": query,
-                "top_k": top_k,
-            }
-            if session_id:
-                kwargs["session_id"] = session_id
+            results = await cognee.recall(
+                query_text=query,
+                top_k=top_k,
+                datasets=[dataset_name],
+            )
 
-            results = await cognee.recall(**kwargs)
+            if not results and session_id:
+                results = await cognee.recall(
+                    query_text=query,
+                    top_k=top_k,
+                    session_id=session_id,
+                )
+
+            extracted = []
+            for r in (results or []):
+                source = getattr(r, "source", None)
+                if source == "graph":
+                    content = getattr(r, "text", None)
+                    score = float(getattr(r, "score", 0))
+                elif source == "qa":
+                    content = getattr(r, "answer", None)
+                    score = 1.0
+                elif source == "session":
+                    content = getattr(r, "content", None)
+                    score = 0.0
+                else:
+                    content = None
+                    score = float(getattr(r, "score", 0))
+
+                extracted.append({
+                    "text": content or str(r),
+                    "score": score,
+                })
 
             return {
                 "status": "success",
-                "results": [
-                    {
-                        "text": str(r.text) if hasattr(r, "text") else str(r),
-                        "score": float(getattr(r, "score", 0)),
-                    }
-                    for r in (results or [])
-                ],
-                "count": len(results) if results else 0,
+                "results": extracted,
+                "count": len(extracted),
             }
         except CogneeApiError as e:
             if "prerequisites not met" in str(e).lower():

@@ -1,23 +1,26 @@
 import { useState, useEffect } from 'react'
 
-export default function Recall({ callApi, loading, result, lastSessionId }) {
+export default function Recall({ callApi, loading, result, lastSessionId, datasets }) {
   const [query, setQuery] = useState('')
-  const [dataset, setDataset] = useState('main_dataset')
+  const [dataset, setDataset] = useState('')
   const [sessionId, setSessionId] = useState('')
-  const [topK, setTopK] = useState(5)
 
   useEffect(() => {
     if (lastSessionId) setSessionId(lastSessionId)
   }, [lastSessionId])
+
+  useEffect(() => {
+    if (datasets.length > 0 && !dataset) setDataset(datasets[0].name)
+  }, [datasets, dataset])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!query.trim()) return
     callApi('recall', {
       query: query.trim(),
-      dataset_name: dataset,
+      dataset_name: dataset || 'main_dataset',
       session_id: sessionId || null,
-      top_k: topK,
+      top_k: 5,
     })
   }
 
@@ -27,7 +30,7 @@ export default function Recall({ callApi, loading, result, lastSessionId }) {
         <span className="pillar-icon">🔍</span>
         <div>
           <h2>Recall</h2>
-          <p className="pillar-desc">Query stored memory with natural language</p>
+          <p className="pillar-desc">Ask questions about your stored data</p>
         </div>
       </div>
 
@@ -44,35 +47,26 @@ export default function Recall({ callApi, loading, result, lastSessionId }) {
 
         <div className="row">
           <div className="field">
-            <label>Dataset name</label>
-            <input
-              value={dataset}
-              onChange={(e) => setDataset(e.target.value)}
-              placeholder="main_dataset"
-            />
+            <label>Dataset</label>
+            <select value={dataset} onChange={(e) => setDataset(e.target.value)}>
+              {datasets.length === 0 && <option value="">No datasets (use Remember first)</option>}
+              {datasets.map(d => (
+                <option key={d.id} value={d.name}>{d.name}</option>
+              ))}
+            </select>
           </div>
           <div className="field">
-            <label>Session ID (required to find session memory)</label>
+            <label>Session ID (optional)</label>
             <input
               value={sessionId}
               onChange={(e) => setSessionId(e.target.value)}
-              placeholder="Paste session ID from Remember"
-            />
-          </div>
-          <div className="field field-sm">
-            <label>Top K results</label>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={topK}
-              onChange={(e) => setTopK(Number(e.target.value))}
+              placeholder="Paste session ID for instant recall"
             />
           </div>
         </div>
 
         <button type="submit" className="btn primary" disabled={loading || !query.trim()}>
-          {loading ? 'Searching...' : 'Recall'}
+          {loading ? 'Searching...' : 'Ask'}
         </button>
       </form>
 
@@ -80,32 +74,22 @@ export default function Recall({ callApi, loading, result, lastSessionId }) {
         <div className={`result ${result.status === 'error' ? 'error' : 'success'}`}>
           <div className="result-header">
             <span className="result-icon">
-              {result.status === 'error' ? '❌' : result.count > 0 ? '🎯' : '📭'}
+              {result.status === 'error' ? '❌' : result.answer ? '🎯' : '📭'}
             </span>
             <span className="result-status">
-              {result.status === 'error' ? result.message : `${result.count} result(s) found`}
+              {result.status === 'error' ? result.message : result.source === 'graph' ? 'Answer (knowledge graph)' : result.source === 'session' ? 'Answer (session)' : ''}
             </span>
           </div>
-          {result.results?.length > 0 && (
-            <div className="results-list">
-              {result.results.map((r, i) => (
-                <div key={i} className="result-item">
-                  <div className="result-item-header">
-                    <span className="result-item-num">#{i + 1}</span>
-                    <span className="result-item-score">Score: {r.score?.toFixed(4) ?? 'N/A'}</span>
-                  </div>
-                  <div className="result-item-text">{r.text}</div>
-                </div>
-              ))}
-            </div>
+          {result.answer && (
+            <div className="answer-box">{result.answer}</div>
           )}
-          {result.count === 0 && result.status === 'empty' && (
+          {!result.answer && result.status === 'empty' && (
             <p className="empty-msg">{result.message}</p>
           )}
-          {result.count === 0 && !result.status?.includes('empty') && !sessionId && (
+          {result.source === 'session' && result.count > 0 && (
             <div className="tip" style={{ margin: '12px', border: '1px solid var(--border)' }}>
-              <strong>💡 Tip:</strong> Session data needs the same <code>session_id</code> used during
-              Remember. If you just stored data, the session ID was auto-filled above. Try searching with it.
+              <strong>⚡ Session recall:</strong> Using "{sessionId}". Data is in session cache.
+              Run Memify to enrich it into the knowledge graph for improved answers.
             </div>
           )}
           <details>

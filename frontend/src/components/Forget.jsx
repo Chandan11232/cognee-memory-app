@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-export default function Forget({ callApi, loading, result }) {
-  const [dataset, setDataset] = useState('main_dataset')
+export default function Forget({ callApi, loading, result, datasets }) {
+  const [dataset, setDataset] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+
+  useEffect(() => {
+    if (datasets.length > 0 && !dataset) setDataset(datasets[0].name)
+  }, [datasets, dataset])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!confirmed) return
     callApi('forget', {
-      dataset_name: dataset,
+      dataset_name: dataset || 'main_dataset',
     })
   }
 
@@ -32,11 +36,12 @@ export default function Forget({ callApi, loading, result }) {
       <form className="form" onSubmit={handleSubmit}>
         <div className="field">
           <label>Dataset to delete</label>
-          <input
-            value={dataset}
-            onChange={(e) => setDataset(e.target.value)}
-            placeholder="main_dataset"
-          />
+          <select value={dataset} onChange={(e) => setDataset(e.target.value)}>
+            {datasets.length === 0 && <option value="">No datasets available</option>}
+            {datasets.map(d => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+          </select>
         </div>
 
         <div className="field checkbox-row">

@@ -7,6 +7,10 @@ import cognee
 from cognee.api.v1.recall.recall import SearchType
 from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
+import google.generativeai as genai
+
+genai.configure(api_key=os.getenv("LLM_API_KEY"))
+llm = genai.GenerativeModel("gemini-2.0-flash")
 
 load_dotenv()
 
@@ -15,6 +19,19 @@ logger = logging.getLogger(__name__)
 
 
 class CogneeClient:
+    async def list_datasets(self) -> dict:
+        try:
+            datasets = await cognee.datasets.list_datasets()
+            return {
+                "status": "success",
+                "datasets": [
+                    {"name": ds.name, "id": str(ds.id)}
+                    for ds in (datasets or [])
+                ],
+            }
+        except Exception as e:
+            return {"status": "success", "datasets": []}
+
     async def remember(
         self,
         text: str,
@@ -56,6 +73,7 @@ class CogneeClient:
     ) -> dict:
         try:
             results = None
+            from_source = None
 
             try:
                 results = await cognee.recall(
@@ -64,6 +82,7 @@ class CogneeClient:
                     top_k=top_k,
                     datasets=[dataset_name],
                 )
+                from_source = "graph"
             except Exception:
                 results = None
 
@@ -71,53 +90,69 @@ class CogneeClient:
                 try:
                     results = await cognee.recall(
                         query_text=query,
-                        query_type=SearchType.RAG_COMPLETION,
                         top_k=top_k,
                         session_id=session_id,
                     )
+                    from_source = "session"
                 except Exception:
                     results = None
 
-            if not results:
-                session_kwargs = {"query_text": query, "top_k": top_k}
-                if session_id:
-                    session_kwargs["session_id"] = session_id
+            if from_source == "graph":
+                answer = " ".join(
+                    getattr(r, "text", str(r)) for r in (results or [])
+                ).strip()
+                return {
+                    "status": "success",
+                    "answer": answer or "No relevant information found.",
+                    "count": len(results) if results else 0,
+                    "source": "graph",
+                }
 
-                results = await cognee.recall(**session_kwargs)
-
-            extracted = []
+            context_parts = []
             for r in (results or []):
-                source = getattr(r, "source", None)
-                if source == "graph":
-                    content = getattr(r, "text", None)
-                    score = float(getattr(r, "score", 0))
-                elif source == "qa":
-                    content = getattr(r, "answer", None)
-                    score = 1.0
-                elif source == "session":
-                    content = getattr(r, "content", None)
-                    score = 0.0
+                src = getattr(r, "source", None)
+                if src == "session":
+                    context_parts.append(getattr(r, "content", str(r)))
+                elif src == "qa":
+                    context_parts.append(getattr(r, "answer", str(r)))
                 else:
-                    content = None
-                    score = float(getattr(r, "score", 0))
+                    context_parts.append(str(r))
 
-                extracted.append({
-                    "text": content or str(r),
-                    "score": score,
-                })
+            context = "\n\n".join(context_parts).strip()
+
+            if not context:
+                return {
+                    "status": "empty",
+                    "answer": "No data found. Use Remember first to store some information.",
+                    "count": 0,
+                    "source": None,
+                }
+
+            prompt = f"""Based on the following context, answer the user's question concisely.
+
+Context:
+{context}
+
+Question: {query}
+
+Answer:"""
+            response = await llm.generate_content_async(prompt)
+            answer = response.text.strip()
 
             return {
                 "status": "success",
-                "results": extracted,
-                "count": len(extracted),
+                "answer": answer or "I couldn't generate an answer from the available information.",
+                "count": len(context_parts),
+                "source": "session",
+                "context": context,
             }
         except CogneeApiError as e:
             if "prerequisites not met" in str(e).lower():
                 return {
                     "status": "empty",
-                    "results": [],
+                    "answer": "No data found. Use Remember first to store some information.",
                     "count": 0,
-                    "message": "No data ingested yet. Use Remember first.",
+                    "source": None,
                 }
             return {"status": "error", "message": str(e)}
         except Exception as e:

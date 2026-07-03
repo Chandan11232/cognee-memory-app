@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Remember from './components/Remember'
 import Recall from './components/Recall'
 import Memify from './components/Memify'
@@ -18,6 +18,14 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [lastSessionId, setLastSessionId] = useState('')
+  const [datasets, setDatasets] = useState([])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/datasets`)
+      .then(r => r.json())
+      .then(d => { if (d.datasets) setDatasets(d.datasets) })
+      .catch(() => {})
+  }, [])
 
   const callApi = async (endpoint, body) => {
     setLoading(true)
@@ -41,7 +49,7 @@ export default function App() {
   }
 
   const renderPillar = () => {
-    const props = { callApi, loading, result, setResult, lastSessionId }
+    const props = { callApi, loading, result, setResult, lastSessionId, datasets }
     switch (active) {
       case 'remember': return <Remember {...props} />
       case 'recall': return <Recall {...props} />

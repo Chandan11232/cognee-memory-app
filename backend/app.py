@@ -57,6 +57,11 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/datasets")
+async def list_datasets():
+    return await client.list_datasets()
+
+
 @app.post("/remember")
 async def remember(req: RememberRequest):
     return await client.remember(

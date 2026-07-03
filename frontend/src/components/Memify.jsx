@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-export default function Memify({ callApi, loading, result }) {
-  const [dataset, setDataset] = useState('main_dataset')
+export default function Memify({ callApi, loading, result, datasets }) {
+  const [dataset, setDataset] = useState('')
   const [background, setBackground] = useState(true)
+
+  useEffect(() => {
+    if (datasets.length > 0 && !dataset) setDataset(datasets[0].name)
+  }, [datasets, dataset])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     callApi('memify', {
-      dataset_name: dataset,
+      dataset_name: dataset || 'main_dataset',
       run_in_background: background,
     })
   }
@@ -33,11 +37,12 @@ export default function Memify({ callApi, loading, result }) {
       <form className="form" onSubmit={handleSubmit}>
         <div className="field">
           <label>Dataset to enrich</label>
-          <input
-            value={dataset}
-            onChange={(e) => setDataset(e.target.value)}
-            placeholder="main_dataset"
-          />
+          <select value={dataset} onChange={(e) => setDataset(e.target.value)}>
+            {datasets.length === 0 && <option value="">No datasets available</option>}
+            {datasets.map(d => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+          </select>
         </div>
 
         <div className="field checkbox-row">

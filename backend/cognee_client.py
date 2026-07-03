@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 import cognee
+from cognee.api.v1.recall.recall import SearchType
 from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
 
@@ -56,12 +57,23 @@ class CogneeClient:
         try:
             results = None
 
-            if session_id:
+            try:
+                results = await cognee.recall(
+                    query_text=query,
+                    query_type=SearchType.RAG_COMPLETION,
+                    top_k=top_k,
+                    datasets=[dataset_name],
+                )
+            except Exception:
+                results = None
+
+            if not results and session_id:
                 try:
                     results = await cognee.recall(
                         query_text=query,
+                        query_type=SearchType.RAG_COMPLETION,
                         top_k=top_k,
-                        datasets=[dataset_name],
+                        session_id=session_id,
                     )
                 except Exception:
                     results = None

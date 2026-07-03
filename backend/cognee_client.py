@@ -136,14 +136,25 @@ Context:
 Question: {query}
 
 Answer:"""
-            response = await llm.generate_content_async(prompt)
-            answer = response.text.strip()
+            try:
+                response = await llm.generate_content_async(prompt)
+                answer = response.text.strip()
+            except Exception:
+                answer = None
+
+            if answer:
+                return {
+                    "status": "success",
+                    "answer": answer,
+                    "count": len(context_parts),
+                    "source": "session",
+                }
 
             return {
                 "status": "success",
-                "answer": answer or "I couldn't generate an answer from the available information.",
+                "answer": "Here is the relevant information from your stored data:",
                 "count": len(context_parts),
-                "source": "session",
+                "source": "session_context",
                 "context": context,
             }
         except CogneeApiError as e:

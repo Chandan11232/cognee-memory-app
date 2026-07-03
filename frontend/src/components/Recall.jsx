@@ -83,7 +83,10 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
           {result.answer && (
             <div className="answer-box">{result.answer}</div>
           )}
-          {!result.answer && result.status === 'empty' && (
+          {result.context && (
+            <div className="answer-box">{result.context}</div>
+          )}
+          {!result.answer && !result.context && result.status === 'empty' && (
             <p className="empty-msg">{result.message}</p>
           )}
           {result.source === 'session' && result.count > 0 && (

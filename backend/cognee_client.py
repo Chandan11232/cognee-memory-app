@@ -6,33 +6,28 @@ import logging
 from typing import Optional
 from urllib.request import Request, urlopen
 
-import cognee
-from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
 
 load_dotenv()
 
-llm_api_key = os.getenv("LLM_API_KEY", "")
-llm_endpoint = os.getenv("LLM_ENDPOINT", "https://generativelanguage.googleapis.com/v1beta/openai")
-llm_model = os.getenv("LLM_MODEL", "gemini-1.5-flash")
-embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
-
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
 logger = logging.getLogger(__name__)
 
-os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "false")
+os.environ["LLM_PROVIDER"] = "openai"
+os.environ["LLM_API_KEY"] = os.getenv("LLM_API_KEY", "")
+os.environ["LLM_MODEL"] = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+os.environ["LLM_ENDPOINT"] = os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
+os.environ["EMBEDDING_PROVIDER"] = "gemini"
+os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
+os.environ["EMBEDDING_API_KEY"] = os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", ""))
+os.environ["EMBEDDING_DIMENSIONS"] = "768"
+os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
+
+import cognee
+from cognee.exceptions import CogneeApiError
 
 
 class CogneeClient:
-    def __init__(self):
-        os.environ["LLM_PROVIDER"] = "openai"
-        os.environ["LLM_MODEL"] = llm_model
-        os.environ["LLM_API_KEY"] = llm_api_key
-        os.environ["LLM_ENDPOINT"] = llm_endpoint
-        os.environ["EMBEDDING_PROVIDER"] = "gemini"
-        os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
-        os.environ["EMBEDDING_API_KEY"] = embedding_api_key
-        os.environ["EMBEDDING_DIMENSIONS"] = "768"
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
         max_retries = 3

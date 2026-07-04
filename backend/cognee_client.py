@@ -15,7 +15,7 @@ load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
 llm_endpoint = os.getenv("LLM_ENDPOINT", "https://openrouter.ai/api/v1")
-llm_model = os.getenv("LLM_MODEL", "openrouter/google/gemini-2.0-flash-lite-preview-02-05:free")
+llm_model = os.getenv("LLM_MODEL", "google/gemini-2.0-flash-lite-preview-02-05:free")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
@@ -47,6 +47,7 @@ class CogneeClient:
                 headers={
                     "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
                     "Content-Type": "application/json",
+                    "Referer": "https://cognee-memory.app",
                 },
             )
             resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))

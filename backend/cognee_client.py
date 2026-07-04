@@ -13,18 +13,19 @@ load_dotenv()
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
 logger = logging.getLogger(__name__)
 
-os.environ["LLM_PROVIDER"] = "openai"
-os.environ["LLM_API_KEY"] = os.getenv("LLM_API_KEY", "")
-os.environ["LLM_MODEL"] = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
-os.environ["LLM_ENDPOINT"] = os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
-os.environ["EMBEDDING_PROVIDER"] = "gemini"
-os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
-os.environ["EMBEDDING_API_KEY"] = os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", ""))
-os.environ["EMBEDDING_DIMENSIONS"] = "768"
 os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
 
 import cognee
 from cognee.exceptions import CogneeApiError
+
+cognee.config.set_llm_provider(os.getenv("LLM_PROVIDER", "openai"))
+cognee.config.set_llm_model(os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"))
+cognee.config.set_llm_api_key(os.getenv("LLM_API_KEY", ""))
+cognee.config.set_llm_endpoint(os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1"))
+cognee.config.set_embedding_provider(os.getenv("EMBEDDING_PROVIDER", "gemini"))
+cognee.config.set_embedding_model(os.getenv("EMBEDDING_MODEL", "gemini/gemini-embedding-001"))
+cognee.config.set_embedding_api_key(os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", "")))
+cognee.config.set_embedding_dimensions(int(os.getenv("EMBEDDING_DIMENSIONS", "768")))
 
 
 class CogneeClient:

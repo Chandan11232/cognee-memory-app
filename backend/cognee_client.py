@@ -35,35 +35,42 @@ class CogneeClient:
         os.environ["EMBEDDING_DIMENSIONS"] = "768"
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
-        try:
-            full_model = os.environ["LLM_MODEL"]
-            api_model = full_model.removeprefix("openrouter/").removeprefix("openai/").removeprefix("gemini/").removeprefix("ollama/")
-            body = json.dumps({
-                "model": api_model,
-                "messages": [{"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}],
-                "temperature": 0.3,
-                "max_tokens": 150,
-            }).encode()
-            req = Request(
-                f"{os.environ['LLM_ENDPOINT']}/chat/completions",
-                data=body,
-                headers={
-                    "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
-                    "Content-Type": "application/json",
-                },
-            )
-            resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))
-            data = json.loads(resp.read())
-            return data["choices"][0]["message"]["content"].strip(), None
-        except Exception as e:
-            detail = str(e)
-            if hasattr(e, "read"):
-                try:
-                    detail += " | " + e.read().decode()
-                except Exception:
-                    pass
-            logger.error(f"LLM API call failed: {detail}")
-            return None, detail
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_model = os.environ["LLM_MODEL"]
+                api_model = full_model.removeprefix("openrouter/").removeprefix("openai/").removeprefix("gemini/").removeprefix("ollama/")
+                body = json.dumps({
+                    "model": api_model,
+                    "messages": [{"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}],
+                    "temperature": 0.3,
+                    "max_tokens": 150,
+                }).encode()
+                req = Request(
+                    f"{os.environ['LLM_ENDPOINT']}/chat/completions",
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))
+                data = json.loads(resp.read())
+                return data["choices"][0]["message"]["content"].strip(), None
+            except Exception as e:
+                detail = str(e)
+                if hasattr(e, "read"):
+                    try:
+                        detail += " | " + e.read().decode()
+                    except Exception:
+                        pass
+                if "429" in detail and attempt < max_retries - 1:
+                    wait = 2 ** (attempt + 1)
+                    logger.warning(f"Rate limited, retrying in {wait}s (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(wait)
+                    continue
+                logger.error(f"LLM API call failed: {detail}")
+                return None, detail
 
     async def list_datasets(self) -> dict:
         try:

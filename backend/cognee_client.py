@@ -27,6 +27,12 @@ cognee.config.set_embedding_model(os.getenv("EMBEDDING_MODEL", "gemini/gemini-em
 cognee.config.set_embedding_api_key(os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", "")))
 cognee.config.set_embedding_dimensions(int(os.getenv("EMBEDDING_DIMENSIONS", "768")))
 
+os.environ["LLM_PROVIDER"] = os.getenv("LLM_PROVIDER", "openai")
+os.environ["LLM_MODEL"] = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+os.environ["LLM_API_KEY"] = os.getenv("LLM_API_KEY", "")
+os.environ["LLM_ENDPOINT"] = os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
+os.environ["EMBEDDING_API_KEY"] = os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", ""))
+
 
 class CogneeClient:
 
@@ -48,6 +54,7 @@ class CogneeClient:
                     headers={
                         "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
                         "Content-Type": "application/json",
+                        "User-Agent": "CogneeMemoryHub/1.0",
                     },
                 )
                 resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))

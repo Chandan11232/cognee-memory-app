@@ -14,7 +14,7 @@ load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
 llm_endpoint = os.getenv("LLM_ENDPOINT", "https://openrouter.ai/api/v1")
-llm_model = os.getenv("LLM_MODEL", "openrouter/google/gemini-2.0-flash-lite-preview-02-05:free")
+llm_model = os.getenv("LLM_MODEL", "openrouter/google/gemma-4-26b-a4b-it:free")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))

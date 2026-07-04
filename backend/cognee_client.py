@@ -15,7 +15,7 @@ load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
 llm_endpoint = os.getenv("LLM_ENDPOINT", "https://openrouter.ai/api/v1")
-llm_model = os.getenv("LLM_MODEL", "google/gemini-2.0-flash-lite-preview-02-05:free")
+llm_model = os.getenv("LLM_MODEL", "openrouter/google/gemini-2.0-flash-lite-preview-02-05:free")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
@@ -32,11 +32,14 @@ class CogneeClient:
         os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
         os.environ["EMBEDDING_API_KEY"] = embedding_api_key
         os.environ["EMBEDDING_DIMENSIONS"] = "768"
+        os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
         try:
+            full_model = os.environ["LLM_MODEL"]
+            api_model = full_model.split("/", 1)[-1] if "/" in full_model else full_model
             body = json.dumps({
-                "model": os.environ["LLM_MODEL"],
+                "model": api_model,
                 "messages": [{"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}],
                 "temperature": 0.3,
                 "max_tokens": 500,

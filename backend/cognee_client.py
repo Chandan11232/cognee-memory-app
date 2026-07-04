@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class CogneeClient:
     def __init__(self):
         os.environ["LLM_PROVIDER"] = "gemini"
-        os.environ["LLM_MODEL"] = "gemini/gemini-2.0-flash"
+        os.environ["LLM_MODEL"] = "gemini/gemini-2.0-flash-lite"
         os.environ["LLM_API_KEY"] = llm_api_key
         os.environ["EMBEDDING_PROVIDER"] = "gemini"
         os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
@@ -33,7 +33,7 @@ class CogneeClient:
         try:
             genai.configure(api_key=llm_api_key)
             model = genai.GenerativeModel(
-                model_name="models/gemini-2.0-flash",
+                model_name="models/gemini-2.0-flash-lite",
                 system_instruction=system_prompt,
             )
             response = await model.generate_content_async(user_prompt)

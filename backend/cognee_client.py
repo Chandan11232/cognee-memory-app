@@ -7,7 +7,6 @@ from typing import Optional
 from urllib.request import Request, urlopen
 
 import cognee
-from cognee.api.v1.recall.recall import SearchType
 from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
 
@@ -42,7 +41,7 @@ class CogneeClient:
                 "model": api_model,
                 "messages": [{"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}],
                 "temperature": 0.3,
-                "max_tokens": 500,
+                "max_tokens": 150,
             }).encode()
             req = Request(
                 f"{os.environ['LLM_ENDPOINT']}/chat/completions",
@@ -89,8 +88,8 @@ class CogneeClient:
                 dataset_name=dataset_name,
                 session_id=sid,
                 chunk_size=chunk_size,
-                run_in_background=run_in_background,
-                self_improvement=not run_in_background,
+                run_in_background=False,
+                self_improvement=False,
             )
 
             return {
@@ -116,25 +115,7 @@ class CogneeClient:
             context_chunks = []
             source = None
 
-            if dataset_name:
-                try:
-                    results = await cognee.recall(
-                        query_text=query,
-                        query_type=SearchType.RAG_COMPLETION,
-                        top_k=top_k,
-                        datasets=[dataset_name],
-                    )
-                    if results:
-                        for r in results:
-                            t = getattr(r, "text", getattr(r, "content", str(r)))
-                            if t.strip():
-                                context_chunks.append(t)
-                        if context_chunks:
-                            source = "graph"
-                except Exception:
-                    pass
-
-            if not context_chunks and session_id:
+            if session_id:
                 try:
                     results = await cognee.recall(
                         query_text=query,
@@ -167,11 +148,11 @@ class CogneeClient:
 
             sys_prompt = (
                 "You are a precise AI assistant with access to stored memories. "
-                "Answer the user's question based ONLY on the provided context. "
-                "Be extremely concise (1-3 sentences). "
+                "Answer based ONLY on the provided context. "
+                "Answer in one sentence. Use at most 30 words. "
                 "If the context doesn't contain the answer, say "
-                "'I couldn't find that information in your stored memory.' "
-                "Never repeat the question. Never add disclaimers or meta-commentary."
+                "'I couldn't find that information.' "
+                "Never repeat the question. Never add disclaimers."
             )
             user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
 

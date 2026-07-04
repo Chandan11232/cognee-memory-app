@@ -25,7 +25,7 @@ os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "false")
 
 class CogneeClient:
     def __init__(self):
-        os.environ["LLM_PROVIDER"] = "custom"
+        os.environ["LLM_PROVIDER"] = "openai"
         os.environ["LLM_MODEL"] = llm_model
         os.environ["LLM_API_KEY"] = llm_api_key
         os.environ["LLM_ENDPOINT"] = llm_endpoint

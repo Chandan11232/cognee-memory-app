@@ -77,17 +77,17 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
               {result.status === 'error' ? '❌' : result.answer ? '🎯' : '📭'}
             </span>
             <span className="result-status">
-              {result.status === 'error' ? result.message : result.source === 'graph' ? 'Answer (knowledge graph)' : result.source === 'session' ? 'Answer (session)' : ''}
+              {result.status === 'error' ? (result.message || result.answer) : result.source === 'graph' ? 'Answer (knowledge graph)' : result.source === 'session' ? 'Answer (session)' : ''}
             </span>
           </div>
           {result.answer && (
             <div className="answer-box">{result.answer}</div>
           )}
-          {result.context && (
-            <div className="answer-box">{result.context}</div>
+          {result.detail && (
+            <p className="empty-msg" style={{ color: 'var(--error)', fontSize: '0.85rem', marginTop: '8px' }}>{result.detail}</p>
           )}
-          {!result.answer && !result.context && result.status === 'empty' && (
-            <p className="empty-msg">{result.message}</p>
+          {!result.answer && result.status === 'empty' && (
+            <p className="empty-msg">{result.answer || result.message}</p>
           )}
           {result.source === 'session' && result.count > 0 && (
             <div className="tip" style={{ margin: '12px', border: '1px solid var(--border)' }}>

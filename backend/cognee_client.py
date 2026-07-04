@@ -1,12 +1,11 @@
 import os
 import asyncio
 import uuid
-import json
 import logging
 from typing import Optional
-from urllib.request import Request, urlopen
 
 import cognee
+import google.generativeai as genai
 from cognee.api.v1.recall.recall import SearchType
 from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
@@ -16,24 +15,33 @@ load_dotenv()
 llm_api_key = os.getenv("LLM_API_KEY", "")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
-gemini_base = "https://generativelanguage.googleapis.com/v1beta/openai"
-
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
 logger = logging.getLogger(__name__)
 
 
-gemini_base = "https://generativelanguage.googleapis.com/v1beta/openai"
-
 class CogneeClient:
     def __init__(self):
-        os.environ["LLM_PROVIDER"] = "openai"
-        os.environ["LLM_MODEL"] = "models/gemini-2.0-flash"
+        os.environ["LLM_PROVIDER"] = "gemini"
+        os.environ["LLM_MODEL"] = "gemini/gemini-2.0-flash"
         os.environ["LLM_API_KEY"] = llm_api_key
-        os.environ["LLM_ENDPOINT"] = gemini_base
-        os.environ["EMBEDDING_PROVIDER"] = "openai"
-        os.environ["EMBEDDING_MODEL"] = "models/gemini-embedding-001"
+        os.environ["EMBEDDING_PROVIDER"] = "gemini"
+        os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
         os.environ["EMBEDDING_API_KEY"] = embedding_api_key
-        os.environ["EMBEDDING_ENDPOINT"] = gemini_base
+        os.environ["EMBEDDING_DIMENSIONS"] = "768"
+
+    async def _call_gemini(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
+        try:
+            genai.configure(api_key=llm_api_key)
+            model = genai.GenerativeModel(
+                model_name="models/gemini-2.0-flash",
+                system_instruction=system_prompt,
+            )
+            response = await model.generate_content_async(user_prompt)
+            return response.text.strip(), None
+        except Exception as e:
+            logger.error(f"Gemini API call failed: {e}")
+            return None, str(e)
+
     async def list_datasets(self) -> dict:
         try:
             datasets = await cognee.datasets.list_datasets()
@@ -87,55 +95,49 @@ class CogneeClient:
         top_k: int = 5,
     ) -> dict:
         try:
-            results = None
-            from_source = None
+            context_chunks = []
+            source = None
 
-            try:
-                results = await cognee.recall(
-                    query_text=query,
-                    query_type=SearchType.RAG_COMPLETION,
-                    top_k=top_k,
-                    datasets=[dataset_name],
-                )
-                from_source = "graph"
-            except Exception:
-                results = None
+            if dataset_name:
+                try:
+                    results = await cognee.recall(
+                        query_text=query,
+                        query_type=SearchType.RAG_COMPLETION,
+                        top_k=top_k,
+                        datasets=[dataset_name],
+                    )
+                    if results:
+                        for r in results:
+                            t = getattr(r, "text", getattr(r, "content", str(r)))
+                            if t.strip():
+                                context_chunks.append(t)
+                        if context_chunks:
+                            source = "graph"
+                except Exception:
+                    pass
 
-            if not results and session_id:
+            if not context_chunks and session_id:
                 try:
                     results = await cognee.recall(
                         query_text=query,
                         top_k=top_k,
                         session_id=session_id,
                     )
-                    from_source = "session"
+                    if results:
+                        for r in results:
+                            src = getattr(r, "source", None)
+                            if src == "qa":
+                                t = getattr(r, "answer", str(r))
+                            else:
+                                t = getattr(r, "content", getattr(r, "text", str(r)))
+                            if t.strip():
+                                context_chunks.append(t)
+                        if context_chunks:
+                            source = "session"
                 except Exception:
-                    results = None
+                    pass
 
-            if from_source == "graph":
-                answer = " ".join(
-                    getattr(r, "text", str(r)) for r in (results or [])
-                ).strip()
-                return {
-                    "status": "success",
-                    "answer": answer or "No relevant information found.",
-                    "count": len(results) if results else 0,
-                    "source": "graph",
-                }
-
-            context_parts = []
-            for r in (results or []):
-                src = getattr(r, "source", None)
-                if src == "session":
-                    context_parts.append(getattr(r, "content", str(r)))
-                elif src == "qa":
-                    context_parts.append(getattr(r, "answer", str(r)))
-                else:
-                    context_parts.append(str(r))
-
-            context = "\n\n".join(context_parts).strip()
-
-            if not context:
+            if not context_chunks:
                 return {
                     "status": "empty",
                     "answer": "No data found. Use Remember first to store some information.",
@@ -143,40 +145,33 @@ class CogneeClient:
                     "source": None,
                 }
 
-            prompt = f"Based on the following context, answer the user's question concisely.\n\nContext:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-            try:
-                body = json.dumps({
-                    "model": "models/gemini-2.0-flash",
-                    "messages": [{"role": "user", "content": prompt}],
-                }).encode()
-                req = Request(
-                    f"{gemini_base}/chat/completions",
-                    data=body,
-                    headers={
-                        "Authorization": f"Bearer {llm_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                )
-                resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))
-                data = json.loads(resp.read())
-                answer = data["choices"][0]["message"]["content"].strip()
-            except Exception:
-                answer = None
+            context = "\n\n".join(context_chunks[:top_k])
+
+            sys_prompt = (
+                "You are a precise AI assistant with access to stored memories. "
+                "Answer the user's question based ONLY on the provided context. "
+                "Be extremely concise (1-3 sentences). "
+                "If the context doesn't contain the answer, say "
+                "'I couldn't find that information in your stored memory.' "
+                "Never repeat the question. Never add disclaimers or meta-commentary."
+            )
+            user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+
+            answer, err = await self._call_gemini(sys_prompt, user_prompt)
 
             if answer:
                 return {
                     "status": "success",
                     "answer": answer,
-                    "count": len(context_parts),
-                    "source": "session",
+                    "count": len(context_chunks),
+                    "source": source,
                 }
 
             return {
-                "status": "success",
-                "answer": "Here is the relevant information from your stored data:",
-                "count": len(context_parts),
-                "source": "session_context",
-                "context": context,
+                "status": "error",
+                "answer": "Could not generate an answer.",
+                "detail": err,
+                "source": source,
             }
         except CogneeApiError as e:
             if "prerequisites not met" in str(e).lower():

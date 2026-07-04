@@ -20,6 +20,8 @@ embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
 logger = logging.getLogger(__name__)
 
+os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "false")
+
 
 class CogneeClient:
     def __init__(self):
@@ -31,12 +33,11 @@ class CogneeClient:
         os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
         os.environ["EMBEDDING_API_KEY"] = embedding_api_key
         os.environ["EMBEDDING_DIMENSIONS"] = "768"
-        os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
         try:
             full_model = os.environ["LLM_MODEL"]
-            api_model = full_model.split("/", 1)[-1] if "/" in full_model else full_model
+            api_model = full_model.removeprefix("openrouter/").removeprefix("openai/").removeprefix("gemini/").removeprefix("ollama/")
             body = json.dumps({
                 "model": api_model,
                 "messages": [{"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}],
@@ -49,15 +50,20 @@ class CogneeClient:
                 headers={
                     "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
                     "Content-Type": "application/json",
-                    "Referer": "https://cognee-memory.app",
                 },
             )
             resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))
             data = json.loads(resp.read())
             return data["choices"][0]["message"]["content"].strip(), None
         except Exception as e:
-            logger.error(f"LLM API call failed: {e}")
-            return None, str(e)
+            detail = str(e)
+            if hasattr(e, "read"):
+                try:
+                    detail += " | " + e.read().decode()
+                except Exception:
+                    pass
+            logger.error(f"LLM API call failed: {detail}")
+            return None, detail
 
     async def list_datasets(self) -> dict:
         try:

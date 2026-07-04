@@ -14,7 +14,7 @@ load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
 llm_endpoint = os.getenv("LLM_ENDPOINT", "https://openrouter.ai/api/v1")
-llm_model = os.getenv("LLM_MODEL", "openrouter/google/gemma-4-26b-a4b-it:free")
+llm_model = os.getenv("LLM_MODEL", "openrouter/meta-llama/llama-3.3-70b-instruct:free")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))

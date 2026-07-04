@@ -1,11 +1,12 @@
 import os
 import asyncio
 import uuid
+import json
 import logging
 from typing import Optional
+from urllib.request import Request, urlopen
 
 import cognee
-import google.generativeai as genai
 from cognee.api.v1.recall.recall import SearchType
 from cognee.exceptions import CogneeApiError
 from dotenv import load_dotenv
@@ -13,6 +14,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
+llm_endpoint = os.getenv("LLM_ENDPOINT", "https://openrouter.ai/api/v1")
+llm_model = os.getenv("LLM_MODEL", "openrouter/google/gemini-2.0-flash-lite-preview-02-05:free")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
@@ -21,25 +24,36 @@ logger = logging.getLogger(__name__)
 
 class CogneeClient:
     def __init__(self):
-        os.environ["LLM_PROVIDER"] = "gemini"
-        os.environ["LLM_MODEL"] = "gemini/gemini-2.0-flash-lite"
+        os.environ["LLM_PROVIDER"] = "custom"
+        os.environ["LLM_MODEL"] = llm_model
         os.environ["LLM_API_KEY"] = llm_api_key
+        os.environ["LLM_ENDPOINT"] = llm_endpoint
         os.environ["EMBEDDING_PROVIDER"] = "gemini"
         os.environ["EMBEDDING_MODEL"] = "gemini/gemini-embedding-001"
         os.environ["EMBEDDING_API_KEY"] = embedding_api_key
         os.environ["EMBEDDING_DIMENSIONS"] = "768"
 
-    async def _call_gemini(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
+    async def _call_llm(self, system_prompt: str, user_prompt: str) -> tuple[Optional[str], Optional[str]]:
         try:
-            genai.configure(api_key=llm_api_key)
-            model = genai.GenerativeModel(
-                model_name="models/gemini-2.0-flash-lite",
-                system_instruction=system_prompt,
+            body = json.dumps({
+                "model": os.environ["LLM_MODEL"],
+                "messages": [{"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}],
+                "temperature": 0.3,
+                "max_tokens": 500,
+            }).encode()
+            req = Request(
+                f"{os.environ['LLM_ENDPOINT']}/chat/completions",
+                data=body,
+                headers={
+                    "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
+                    "Content-Type": "application/json",
+                },
             )
-            response = await model.generate_content_async(user_prompt)
-            return response.text.strip(), None
+            resp = await asyncio.get_event_loop().run_in_executor(None, lambda: urlopen(req))
+            data = json.loads(resp.read())
+            return data["choices"][0]["message"]["content"].strip(), None
         except Exception as e:
-            logger.error(f"Gemini API call failed: {e}")
+            logger.error(f"LLM API call failed: {e}")
             return None, str(e)
 
     async def list_datasets(self) -> dict:
@@ -157,7 +171,7 @@ class CogneeClient:
             )
             user_prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
 
-            answer, err = await self._call_gemini(sys_prompt, user_prompt)
+            answer, err = await self._call_llm(sys_prompt, user_prompt)
 
             if answer:
                 return {

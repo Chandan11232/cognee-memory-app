@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 llm_api_key = os.getenv("LLM_API_KEY", "")
-llm_endpoint = os.getenv("LLM_ENDPOINT", "https://openrouter.ai/api/v1")
-llm_model = os.getenv("LLM_MODEL", "openrouter/meta-llama/llama-3.3-70b-instruct:free")
+llm_endpoint = os.getenv("LLM_ENDPOINT", "https://generativelanguage.googleapis.com/v1beta/openai")
+llm_model = os.getenv("LLM_MODEL", "gemini-2.0-flash")
 embedding_api_key = os.getenv("EMBEDDING_API_KEY", llm_api_key)
 
 logging.basicConfig(level=os.getenv("COGNEE_LOG_LEVEL", "ERROR"))
@@ -25,7 +25,7 @@ os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "false")
 
 class CogneeClient:
     def __init__(self):
-        os.environ["LLM_PROVIDER"] = "custom"
+        os.environ["LLM_PROVIDER"] = "gemini"
         os.environ["LLM_MODEL"] = llm_model
         os.environ["LLM_API_KEY"] = llm_api_key
         os.environ["LLM_ENDPOINT"] = llm_endpoint

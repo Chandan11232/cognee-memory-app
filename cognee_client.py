@@ -96,26 +96,17 @@ class CogneeClient:
         run_in_background: bool = False,
         chunk_size: int = 2048,
     ) -> dict:
-        # IMPORTANT: only attach a session_id if the caller actually asked for
-        # session-scoped (short-term) memory. Cognee treats a remember() call
-        # WITH session_id as writing to a transient session cache instead of
-        # the permanent graph. Inventing a session_id here (as before) meant
-        # every memory was session-scoped and effectively unreachable the
-        # moment that id wasn't resent (e.g. after a page refresh).
-        sid = session_id
+        sid = session_id or str(uuid.uuid4())
 
         try:
-            kwargs = dict(
+            result = await cognee.remember(
                 data=text,
                 dataset_name=dataset_name,
+                session_id=sid,
                 chunk_size=chunk_size,
                 run_in_background=False,
                 self_improvement=False,
             )
-            if sid:
-                kwargs["session_id"] = sid
-
-            result = await cognee.remember(**kwargs)
 
             return {
                 "status": "stored",
@@ -158,33 +149,6 @@ class CogneeClient:
                                 context_chunks.append(t)
                         if context_chunks:
                             source = "session"
-                except Exception:
-                    pass
-
-            # Fallback: query the permanent, disk-backed dataset directly.
-            # This is what actually survives a page refresh, since it doesn't
-            # depend on any session_id surviving on the frontend.
-            if not context_chunks:
-                try:
-                    results = await cognee.recall(
-                        query_text=query,
-                        top_k=top_k,
-                        datasets=[dataset_name],
-                    )
-                    if results:
-                        for r in results:
-                            if isinstance(r, str):
-                                t = r
-                            else:
-                                src = getattr(r, "source", None)
-                                if src == "qa":
-                                    t = getattr(r, "answer", str(r))
-                                else:
-                                    t = getattr(r, "content", getattr(r, "text", str(r)))
-                            if t and t.strip():
-                                context_chunks.append(t)
-                        if context_chunks:
-                            source = "dataset"
                 except Exception:
                     pass
 

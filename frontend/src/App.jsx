@@ -7,10 +7,10 @@ import Forget from './components/Forget'
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const PILLARS = [
-  { key: 'remember', label: 'Remember', icon: '💾', color: '#6366f1' },
-  { key: 'recall', label: 'Recall', icon: '🔍', color: '#8b5cf6' },
-  { key: 'memify', label: 'Memify', icon: '⚡', color: '#06b6d4' },
-  { key: 'forget', label: 'Forget', icon: '🗑️', color: '#ef4444' },
+  { key: 'remember', label: 'Remember', icon: 'R', color: '#7c6aef' },
+  { key: 'recall', label: 'Recall', icon: 'Q', color: '#a78bfa' },
+  { key: 'memify', label: 'Memify', icon: 'M', color: '#22d3ee' },
+  { key: 'forget', label: 'Forget', icon: 'X', color: '#e05252' },
 ]
 
 export default function App() {
@@ -102,13 +102,8 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1 className="title">
-          <span className="title-icon">🧠</span>
-          Cognee Memory Hub
-        </h1>
-        <p className="subtitle">
-          Persistent AI memory — remember, recall, enrich, forget
-        </p>
+        <h1 className="title">Cognee Memory Hub</h1>
+        <p className="subtitle">Persistent AI memory — remember, recall, enrich, forget</p>
       </header>
 
       <nav className="nav">
@@ -118,11 +113,9 @@ export default function App() {
             className={`nav-btn ${active === p.key ? 'active' : ''}`}
             style={{
               '--accent': p.color,
-              borderColor: active === p.key ? p.color : 'transparent',
             }}
             onClick={() => { setActive(p.key); setResult(null) }}
           >
-            <span className="nav-icon">{p.icon}</span>
             <span className="nav-label">{p.label}</span>
           </button>
         ))}

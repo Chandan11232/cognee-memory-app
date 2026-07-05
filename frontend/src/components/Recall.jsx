@@ -47,7 +47,7 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
   return (
     <div className="pillar">
       <div className="pillar-header">
-        <span className="pillar-icon">🔍</span>
+        <span className="pillar-icon">Q</span>
         <div>
           <h2>Recall</h2>
           <p className="pillar-desc">Ask questions about your stored data</p>
@@ -98,7 +98,7 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
                     className="session-item-remove"
                     onClick={(e) => { e.stopPropagation(); removeSession(s.session_id) }}
                   >
-                    ×
+                    x
                   </button>
                 </div>
               ))}
@@ -126,9 +126,7 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
       {result && (
         <div className={`result ${result.status === 'error' ? 'error' : 'success'}`}>
           <div className="result-header">
-            <span className="result-icon">
-              {result.status === 'error' ? '❌' : result.answer ? '🎯' : '📭'}
-            </span>
+            <span className="result-icon"></span>
             <span className="result-status">
               {result.status === 'error' ? (result.message || result.answer) : result.source === 'graph' ? 'Answer (knowledge graph)' : result.source === 'session' ? 'Answer (session)' : ''}
             </span>
@@ -137,14 +135,14 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
             <div className="answer-box">{result.answer}</div>
           )}
           {result.detail && (
-            <p className="empty-msg" style={{ color: 'var(--error)', fontSize: '0.85rem', marginTop: '8px' }}>{result.detail}</p>
+            <p className="empty-msg" style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '8px' }}>{result.detail}</p>
           )}
           {!result.answer && result.status === 'empty' && (
             <p className="empty-msg">{result.answer || result.message}</p>
           )}
           {result.source === 'session' && result.count > 0 && (
             <div className="tip" style={{ margin: '12px', border: '1px solid var(--border)' }}>
-              <strong>⚡ Session recall:</strong> Using "{sessionId}". Data is in session cache.
+              <strong>Session recall:</strong> Using "{sessionId}". Data is in session cache.
               Run Memify to enrich it into the knowledge graph for improved answers.
             </div>
           )}

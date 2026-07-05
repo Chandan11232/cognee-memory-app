@@ -23,7 +23,7 @@ export default function Memify({ callApi, loading, result, datasets, lastDataset
   return (
     <div className="pillar">
       <div className="pillar-header">
-        <span className="pillar-icon">⚡</span>
+        <span className="pillar-icon">M</span>
         <div>
           <h2>Memify</h2>
           <p className="pillar-desc">Enrich and improve the knowledge graph</p>
@@ -69,7 +69,7 @@ export default function Memify({ callApi, loading, result, datasets, lastDataset
       {result && (
         <div className={`result ${result.status === 'error' ? 'error' : 'success'}`}>
           <div className="result-header">
-            <span className="result-icon">{result.status === 'error' ? '❌' : '✅'}</span>
+            <span className="result-icon"></span>
             <span className="result-status">{result.message}</span>
           </div>
           <pre className="result-body">{JSON.stringify(result, null, 2)}</pre>

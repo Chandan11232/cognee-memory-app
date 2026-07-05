@@ -33,7 +33,7 @@ export default function Forget({ callApi, loading, result, datasets, lastDataset
   return (
     <div className="pillar">
       <div className="pillar-header">
-        <span className="pillar-icon">🗑️</span>
+        <span className="pillar-icon">X</span>
         <div>
           <h2>Forget</h2>
           <p className="pillar-desc">Remove data from Cognee memory</p>
@@ -42,7 +42,7 @@ export default function Forget({ callApi, loading, result, datasets, lastDataset
 
       <div className="info-card warning">
         <p>
-          <strong>⚠️ Warning:</strong> This action permanently removes the dataset
+          <strong>Warning:</strong> This action permanently removes the dataset
           and all its associated graph data, embeddings, and metadata.
         </p>
       </div>
@@ -93,7 +93,7 @@ export default function Forget({ callApi, loading, result, datasets, lastDataset
       {result && (
         <div className={`result ${result.status === 'error' ? 'error' : 'success'}`}>
           <div className="result-header">
-            <span className="result-icon">{result.status === 'error' ? '❌' : '✅'}</span>
+            <span className="result-icon"></span>
             <span className="result-status">{result.message}</span>
           </div>
           <pre className="result-body">{JSON.stringify(result, null, 2)}</pre>

@@ -37,7 +37,7 @@ export default function Remember({ callApi, loading, result, lastDataset, refres
   return (
     <div className="pillar">
       <div className="pillar-header">
-        <span className="pillar-icon">💾</span>
+        <span className="pillar-icon">R</span>
         <div>
           <h2>Remember</h2>
           <p className="pillar-desc">Store data in Cognee's persistent memory</p>
@@ -94,7 +94,7 @@ export default function Remember({ callApi, loading, result, lastDataset, refres
       {result && (
         <div className={`result ${result.status === 'error' ? 'error' : 'success'}`}>
           <div className="result-header">
-            <span className="result-icon">{result.status === 'error' ? '❌' : '✅'}</span>
+            <span className="result-icon"></span>
             <span className="result-status">{result.status}</span>
           </div>
           {result.session_id && (
@@ -108,7 +108,7 @@ export default function Remember({ callApi, loading, result, lastDataset, refres
       )}
 
       <div className="tip">
-        <strong>⚡ Speed tip:</strong> Data is stored in <strong>session memory</strong> (instant).
+        <strong>Speed tip:</strong> Data is stored in <strong>session memory</strong> (instant).
         Switch to <strong>Recall</strong> — the session ID is already filled in for you.
         Data also bridges to permanent memory in the background.
       </div>

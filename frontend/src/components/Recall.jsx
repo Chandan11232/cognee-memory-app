@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function Recall({ callApi, loading, result, lastSessionId, datasets, lastDataset, setLastDataset }) {
+export default function Recall({ callApi, loading, result, lastSessionId, datasets, lastDataset, setLastDataset, sessions, removeSession }) {
   const [query, setQuery] = useState('')
   const [dataset, setDataset] = useState(lastDataset || '')
   const [sessionId, setSessionId] = useState('')
@@ -24,6 +24,10 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
     localStorage.setItem('cognee_last_dataset', val)
   }
 
+  const handleSessionSelect = (sid) => {
+    setSessionId(sid === sessionId ? '' : sid)
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!query.trim()) return
@@ -33,6 +37,11 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
       session_id: sessionId || null,
       top_k: 5,
     })
+  }
+
+  const formatTime = (ts) => {
+    const d = new Date(ts)
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
@@ -56,25 +65,58 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
           />
         </div>
 
-        <div className="row">
+        <div className="field">
+          <label>Dataset</label>
+          <select value={dataset} onChange={handleDatasetChange}>
+            {datasets.length === 0 && <option value="">No datasets (use Remember first)</option>}
+            {datasets.map(d => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {sessions.length > 0 && (
           <div className="field">
-            <label>Dataset</label>
-            <select value={dataset} onChange={handleDatasetChange}>
-              {datasets.length === 0 && <option value="">No datasets (use Remember first)</option>}
-              {datasets.map(d => (
-                <option key={d.id} value={d.name}>{d.name}</option>
+            <label>Sessions (click to select for instant recall)</label>
+            <div className="session-list">
+              {sessions.map(s => (
+                <div
+                  key={s.session_id}
+                  className={`session-item ${sessionId === s.session_id ? 'active' : ''}`}
+                  onClick={() => handleSessionSelect(s.session_id)}
+                >
+                  <div className="session-item-header">
+                    <span className="session-item-id">{s.session_id}</span>
+                    <span className="session-item-time">{formatTime(s.timestamp)}</span>
+                  </div>
+                  <div className="session-item-meta">
+                    <span className="session-item-dataset">{s.dataset_name}</span>
+                    {s.preview && <span className="session-item-preview">{s.preview}...</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="session-item-remove"
+                    onClick={(e) => { e.stopPropagation(); removeSession(s.session_id) }}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
+        )}
+
+        {sessions.length === 0 && (
           <div className="field">
             <label>Session ID (optional)</label>
             <input
               value={sessionId}
               onChange={(e) => setSessionId(e.target.value)}
-              placeholder="Paste session ID for instant recall"
+              placeholder="Use Remember with a session ID first"
+              disabled
             />
           </div>
-        </div>
+        )}
 
         <button type="submit" className="btn primary" disabled={loading || !query.trim()}>
           {loading ? 'Searching...' : 'Ask'}

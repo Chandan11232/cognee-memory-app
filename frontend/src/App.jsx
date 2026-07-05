@@ -20,12 +20,31 @@ export default function App() {
   const [lastSessionId, setLastSessionId] = useState('')
   const [datasets, setDatasets] = useState([])
   const [lastDataset, setLastDataset] = useState(() => localStorage.getItem('cognee_last_dataset') || '')
+  const [sessions, setSessions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cognee_sessions') || '[]') } catch { return [] }
+  })
 
   const refreshDatasets = () => {
     fetch(`${API_BASE}/datasets`)
       .then(r => r.json())
       .then(d => { if (d.datasets) setDatasets(d.datasets) })
       .catch(() => {})
+  }
+
+  const addSession = (session) => {
+    setSessions(prev => {
+      const updated = [session, ...prev.filter(s => s.session_id !== session.session_id)]
+      localStorage.setItem('cognee_sessions', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const removeSession = (sessionId) => {
+    setSessions(prev => {
+      const updated = prev.filter(s => s.session_id !== sessionId)
+      localStorage.setItem('cognee_sessions', JSON.stringify(updated))
+      return updated
+    })
   }
 
   useEffect(() => {
@@ -70,7 +89,7 @@ export default function App() {
   }
 
   const renderPillar = () => {
-    const props = { callApi, loading, result, setResult, lastSessionId, datasets, lastDataset, setLastDataset, refreshDatasets }
+    const props = { callApi, loading, result, setResult, lastSessionId, datasets, lastDataset, setLastDataset, refreshDatasets, sessions, addSession, removeSession }
     switch (active) {
       case 'remember': return <Remember {...props} />
       case 'recall': return <Recall {...props} />

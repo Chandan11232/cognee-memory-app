@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function Remember({ callApi, loading, result, lastDataset, refreshDatasets }) {
+export default function Remember({ callApi, loading, result, lastDataset, refreshDatasets, addSession }) {
   const [text, setText] = useState('')
   const [dataset, setDataset] = useState(lastDataset || 'main_dataset')
   const [sessionId, setSessionId] = useState('')
@@ -10,13 +10,26 @@ export default function Remember({ callApi, loading, result, lastDataset, refres
     if (lastDataset) setDataset(lastDataset)
   }, [lastDataset])
 
+  useEffect(() => {
+    if (result?.status === 'stored' && result.session_id) {
+      addSession({
+        session_id: result.session_id,
+        dataset_name: dataset,
+        preview: text.trim().slice(0, 80),
+        timestamp: Date.now(),
+      })
+    }
+  }, [result])
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!text.trim()) return
+    const id = sessionId.trim() || `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    setSessionId(id)
     callApi('remember', {
       text: text.trim(),
       dataset_name: dataset,
-      session_id: sessionId || null,
+      session_id: id,
       run_in_background: background,
     })
   }
@@ -52,11 +65,11 @@ export default function Remember({ callApi, loading, result, lastDataset, refres
             />
           </div>
           <div className="field">
-            <label>Session ID (leave empty for auto-generate)</label>
+            <label>Session ID (auto-generated if empty)</label>
             <input
               value={sessionId}
               onChange={(e) => setSessionId(e.target.value)}
-              placeholder="Auto-generated — used for fast recall"
+              placeholder="Leave empty for auto-generate"
             />
           </div>
         </div>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 
-export default function Recall({ callApi, loading, result, lastSessionId, datasets }) {
+export default function Recall({ callApi, loading, result, lastSessionId, datasets, lastDataset, setLastDataset }) {
   const [query, setQuery] = useState('')
-  const [dataset, setDataset] = useState('')
+  const [dataset, setDataset] = useState(lastDataset || '')
   const [sessionId, setSessionId] = useState('')
 
   useEffect(() => {
@@ -10,8 +10,19 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
   }, [lastSessionId])
 
   useEffect(() => {
-    if (datasets.length > 0 && !dataset) setDataset(datasets[0].name)
-  }, [datasets, dataset])
+    if (lastDataset) {
+      setDataset(lastDataset)
+    } else if (datasets.length > 0 && !dataset) {
+      setDataset(datasets[0].name)
+    }
+  }, [datasets, lastDataset])
+
+  const handleDatasetChange = (e) => {
+    const val = e.target.value
+    setDataset(val)
+    setLastDataset(val)
+    localStorage.setItem('cognee_last_dataset', val)
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -48,7 +59,7 @@ export default function Recall({ callApi, loading, result, lastSessionId, datase
         <div className="row">
           <div className="field">
             <label>Dataset</label>
-            <select value={dataset} onChange={(e) => setDataset(e.target.value)}>
+            <select value={dataset} onChange={handleDatasetChange}>
               {datasets.length === 0 && <option value="">No datasets (use Remember first)</option>}
               {datasets.map(d => (
                 <option key={d.id} value={d.name}>{d.name}</option>

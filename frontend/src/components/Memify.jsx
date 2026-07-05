@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 
-export default function Memify({ callApi, loading, result, datasets }) {
-  const [dataset, setDataset] = useState('')
+export default function Memify({ callApi, loading, result, datasets, lastDataset }) {
+  const [dataset, setDataset] = useState(lastDataset || '')
   const [background, setBackground] = useState(true)
 
   useEffect(() => {
-    if (datasets.length > 0 && !dataset) setDataset(datasets[0].name)
-  }, [datasets, dataset])
+    if (lastDataset) {
+      setDataset(lastDataset)
+    } else if (datasets.length > 0 && !dataset) {
+      setDataset(datasets[0].name)
+    }
+  }, [datasets, lastDataset])
 
   const handleSubmit = (e) => {
     e.preventDefault()

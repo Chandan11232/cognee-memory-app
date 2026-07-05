@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-export default function Remember({ callApi, loading, result }) {
+export default function Remember({ callApi, loading, result, lastDataset, refreshDatasets }) {
   const [text, setText] = useState('')
-  const [dataset, setDataset] = useState('main_dataset')
+  const [dataset, setDataset] = useState(lastDataset || 'main_dataset')
   const [sessionId, setSessionId] = useState('')
   const [background, setBackground] = useState(false)
+
+  useEffect(() => {
+    if (lastDataset) setDataset(lastDataset)
+  }, [lastDataset])
 
   const handleSubmit = (e) => {
     e.preventDefault()

@@ -19,12 +19,17 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [lastSessionId, setLastSessionId] = useState('')
   const [datasets, setDatasets] = useState([])
+  const [lastDataset, setLastDataset] = useState(() => localStorage.getItem('cognee_last_dataset') || '')
 
-  useEffect(() => {
+  const refreshDatasets = () => {
     fetch(`${API_BASE}/datasets`)
       .then(r => r.json())
       .then(d => { if (d.datasets) setDatasets(d.datasets) })
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    refreshDatasets()
   }, [])
 
   const callApi = async (endpoint, body) => {
@@ -40,6 +45,22 @@ export default function App() {
       if (endpoint === 'remember' && data.session_id) {
         setLastSessionId(data.session_id)
       }
+      if (endpoint === 'remember' && data.status === 'stored' && data.dataset_name) {
+        setLastDataset(data.dataset_name)
+        localStorage.setItem('cognee_last_dataset', data.dataset_name)
+        refreshDatasets()
+      }
+      if (endpoint === 'recall' && data.status === 'success' && body.dataset_name) {
+        setLastDataset(body.dataset_name)
+        localStorage.setItem('cognee_last_dataset', body.dataset_name)
+      }
+      if (endpoint === 'forget' && data.status === 'deleted') {
+        refreshDatasets()
+        if (body.dataset_name === lastDataset) {
+          setLastDataset('')
+          localStorage.removeItem('cognee_last_dataset')
+        }
+      }
       setResult(data)
     } catch (err) {
       setResult({ status: 'error', message: err.message })
@@ -49,7 +70,7 @@ export default function App() {
   }
 
   const renderPillar = () => {
-    const props = { callApi, loading, result, setResult, lastSessionId, datasets }
+    const props = { callApi, loading, result, setResult, lastSessionId, datasets, lastDataset, setLastDataset, refreshDatasets }
     switch (active) {
       case 'remember': return <Remember {...props} />
       case 'recall': return <Recall {...props} />

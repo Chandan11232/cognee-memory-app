@@ -47,6 +47,14 @@ export default function App() {
     })
   }
 
+  const removeSessionsByDataset = (datasetName) => {
+    setSessions(prev => {
+      const updated = prev.filter(s => s.dataset_name !== datasetName)
+      localStorage.setItem('cognee_sessions', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   useEffect(() => {
     refreshDatasets()
   }, [])
@@ -75,6 +83,7 @@ export default function App() {
       }
       if (endpoint === 'forget' && data.status === 'deleted') {
         refreshDatasets()
+        removeSessionsByDataset(body.dataset_name)
         if (body.dataset_name === lastDataset) {
           setLastDataset('')
           localStorage.removeItem('cognee_last_dataset')
